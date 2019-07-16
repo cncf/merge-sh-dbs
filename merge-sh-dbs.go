@@ -84,6 +84,55 @@ func mergeDatabases(dbs []*sql.DB) error {
 		_, err := mdb.Exec("insert into countries(code, name, alpha3) values(?, ?, ?)", c.code, c.name, c.alpha3)
 		fatalOnError(err)
 	}
+	/* organizations
+	+-------+--------------+------+-----+---------+----------------+
+	| Field | Type         | Null | Key | Default | Extra          |
+	+-------+--------------+------+-----+---------+----------------+
+	| id    | int(11)      | NO   | PRI | NULL    | auto_increment |
+	| name  | varchar(191) | NO   | UNI | NULL    |                |
+	+-------+--------------+------+-----+---------+----------------+
+	*/
+	_, err = mdb.Exec("delete from organizations")
+	var orgID2Str [3]map[int64]string
+	var orgStr2ID [3]map[string]int64
+	orgStr := make(map[string]struct{})
+	fatalOnError(err)
+	for i := 0; i < 2; i++ {
+		rows, err := dbs[i].Query("select id, name from organizations")
+		fatalOnError(err)
+		id := int64(0)
+		name := ""
+		orgID2Str[i] = make(map[int64]string)
+		orgStr2ID[i] = make(map[string]int64)
+		for rows.Next() {
+			fatalOnError(rows.Scan(&id, &name))
+			orgID2Str[i][id] = name
+			orgStr2ID[i][name] = id
+			orgStr[name] = struct{}{}
+		}
+		fatalOnError(rows.Err())
+		fatalOnError(rows.Close())
+	}
+	orgID2Str[2] = make(map[int64]string)
+	orgStr2ID[2] = make(map[string]int64)
+	for id, name := range orgID2Str[0] {
+		_, ok := orgID2Str[1][id]
+		if !ok {
+			fmt.Printf("Organization from 1st (id=%d, name=%s) missing in 2nd, adding\n", id, name)
+			continue
+		}
+	}
+	for id, name := range orgID2Str[1] {
+		_, ok := orgID2Str[0][id]
+		if !ok {
+			fmt.Printf("Organization from 2nd (id=%d, name=%s) missing in 1st, adding\n", id, name)
+			continue
+		}
+	}
+	for name := range orgStr {
+		_, err := mdb.Exec("insert into organizations(name) values(?)", name)
+		fatalOnError(err)
+	}
 	return nil
 }
 
