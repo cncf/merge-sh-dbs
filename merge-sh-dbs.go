@@ -43,6 +43,7 @@ type domainOrg struct {
 
 // mergeDatabases merged dbs[0] and dbs[1] into dbs[2]
 func mergeDatabases(dbs []*sql.DB) error {
+	dbg := os.Getenv("DEBUG") != ""
 	/* countries
 	+--------+--------------+------+-----+---------+-------+
 	| Field  | Type         | Null | Key | Default | Extra |
@@ -52,7 +53,6 @@ func mergeDatabases(dbs []*sql.DB) error {
 	| alpha3 | varchar(3)   | NO   | UNI | NULL    |       |
 	+--------+--------------+------+-----+---------+-------+
 	*/
-	dbg := os.Getenv("DEBUG") != ""
 	fmt.Printf("countries...\n")
 	mdb := dbs[2]
 	_, err := mdb.Exec("delete from countries")
@@ -245,6 +245,13 @@ func mergeDatabases(dbs []*sql.DB) error {
 		domID2Str[2][id] = do.domain
 		domStr2ID[2][lDomain] = id
 	}
+  /* matching_blacklist
+  +----------+--------------+------+-----+---------+-------+
+  | Field    | Type         | Null | Key | Default | Extra |
+  +----------+--------------+------+-----+---------+-------+
+  | excluded | varchar(128) | NO   | PRI | NULL    |       |
+  +----------+--------------+------+-----+---------+-------+
+  */
 	return nil
 }
 
