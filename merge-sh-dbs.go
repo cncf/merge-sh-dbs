@@ -23,6 +23,13 @@ func fatalf(f string, a ...interface{}) {
 	fatalOnError(fmt.Errorf(f, a...))
 }
 
+// country holds data from countries table
+type country struct {
+	code   string
+	name   string
+	alpha3 string
+}
+
 // mergeDatabases merged dbs[0] and dbs[1] into dbs[2]
 func mergeDatabases(dbs []*sql.DB) error {
 	/* countries
@@ -37,19 +44,45 @@ func mergeDatabases(dbs []*sql.DB) error {
 	mdb := dbs[2]
 	_, err := mdb.Exec("delete from countries")
 	fatalOnError(err)
+	var cm [3]map[string]country
 	for i := 0; i < 2; i++ {
 		rows, err := dbs[i].Query("select code, name, alpha3 from countries")
 		fatalOnError(err)
-		var (
-			code   string
-			name   string
-			alpha3 string
-		)
+		var c country
+		cm[i] = make(map[string]country)
 		for rows.Next() {
-			fatalOnError(rows.Scan(&code, &name, &alpha3))
+			fatalOnError(rows.Scan(&c.code, &c.name, &c.alpha3))
+			cm[i][c.code] = c
 		}
 		fatalOnError(rows.Err())
 		fatalOnError(rows.Close())
+	}
+	cm[2] = make(map[string]country)
+	for code, c := range cm[0] {
+		c2, ok := cm[1][code]
+		cm[2][code] = c
+		if !ok {
+			fmt.Printf("Country from 1st (%+v) missing in 2nd, adding\n", c)
+			continue
+		}
+		if c.name != c2.name || c.alpha3 != c2.alpha3 {
+			fmt.Printf("Country from 1st (%+v) different in 2nd, using first\n", c)
+		}
+	}
+	for code, c := range cm[1] {
+		c1, ok := cm[0][code]
+		if !ok {
+			fmt.Printf("Country from 2nd (%+v) missing in 1st, adding\n", c)
+			cm[2][code] = c
+			continue
+		}
+		if c.name != c1.name || c.alpha3 != c1.alpha3 {
+			fmt.Printf("Country from 2nd (%+v) different in 1st, using first\n", c)
+		}
+	}
+	for _, c := range cm[2] {
+		_, err := mdb.Exec("insert into countries(code, name, alpha3) values(?, ?, ?)", c.code, c.name, c.alpha3)
+		fatalOnError(err)
 	}
 	return nil
 }
