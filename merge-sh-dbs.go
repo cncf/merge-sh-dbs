@@ -23,6 +23,37 @@ func fatalf(f string, a ...interface{}) {
 	fatalOnError(fmt.Errorf(f, a...))
 }
 
+// mergeDatabases merged dbs[0] and dbs[1] into dbs[2]
+func mergeDatabases(dbs []*sql.DB) error {
+	/* countries
+	+--------+--------------+------+-----+---------+-------+
+	| Field  | Type         | Null | Key | Default | Extra |
+	+--------+--------------+------+-----+---------+-------+
+	| code   | varchar(2)   | NO   | PRI | NULL    |       |
+	| name   | varchar(191) | NO   |     | NULL    |       |
+	| alpha3 | varchar(3)   | NO   | UNI | NULL    |       |
+	+--------+--------------+------+-----+---------+-------+
+	*/
+	mdb := dbs[2]
+	_, err := mdb.Exec("delete from countries")
+	fatalOnError(err)
+	for i := 0; i < 2; i++ {
+		rows, err := dbs[i].Query("select code, name, alpha3 from countries")
+		fatalOnError(err)
+		var (
+			code   string
+			name   string
+			alpha3 string
+		)
+		for rows.Next() {
+			fatalOnError(rows.Scan(&code, &name, &alpha3))
+		}
+		fatalOnError(rows.Err())
+		fatalOnError(rows.Close())
+	}
+	return nil
+}
+
 // getConnectString - get MariaDB SH (Sorting Hat) database DSN
 // Either provide full DSN via SH_DSN='shuser:shpassword@tcp(shhost:shport)/shdb?charset=utf8'
 // Or use some SH_ variables, only SH_PASS is required
@@ -85,4 +116,5 @@ func main() {
 		fatalOnError(err)
 		defer func() { fatalOnError(db.Close()) }()
 	}
+	fatalOnError(mergeDatabases(dbs))
 }
