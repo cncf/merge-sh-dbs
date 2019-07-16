@@ -52,6 +52,7 @@ func mergeDatabases(dbs []*sql.DB) error {
 	| alpha3 | varchar(3)   | NO   | UNI | NULL    |       |
 	+--------+--------------+------+-----+---------+-------+
 	*/
+	dbg := os.Getenv("DEBUG") != ""
 	fmt.Printf("countries...\n")
 	mdb := dbs[2]
 	_, err := mdb.Exec("delete from countries")
@@ -73,7 +74,7 @@ func mergeDatabases(dbs []*sql.DB) error {
 	for code, c := range countryMap[0] {
 		c2, ok := countryMap[1][code]
 		countryMap[2][code] = c
-		if !ok {
+		if dbg && !ok {
 			fmt.Printf("Country from 1st (%+v) missing in 2nd, adding\n", c)
 			continue
 		}
@@ -83,7 +84,7 @@ func mergeDatabases(dbs []*sql.DB) error {
 	}
 	for code, c := range countryMap[1] {
 		c1, ok := countryMap[0][code]
-		if !ok {
+		if dbg && !ok {
 			fmt.Printf("Country from 2nd (%+v) missing in 1st, adding\n", c)
 			countryMap[2][code] = c
 			continue
@@ -131,16 +132,14 @@ func mergeDatabases(dbs []*sql.DB) error {
 	orgStr2ID[2] = make(map[string]int64)
 	for name, id := range orgStr2ID[0] {
 		_, ok := orgStr2ID[1][name]
-		if !ok {
+		if dbg && !ok {
 			fmt.Printf("Organization from 1st (id=%d, name=%s) missing in 2nd, adding\n", id, name)
-			continue
 		}
 	}
 	for name, id := range orgStr2ID[1] {
 		_, ok := orgStr2ID[0][name]
-		if !ok {
+		if dbg && !ok {
 			fmt.Printf("Organization from 2nd (id=%d, name=%s) missing in 1st, adding\n", id, name)
-			continue
 		}
 	}
 	for lName, name := range orgStr {
@@ -171,11 +170,16 @@ func mergeDatabases(dbs []*sql.DB) error {
 	_, err = mdb.Exec("delete from domains_organizations")
 	fatalOnError(err)
 	var domainMap [3]map[int64]domainOrg
+	var domID2Str [3]map[int64]string
+	var domStr2ID [3]map[string]int64
+	domStr := make(map[string]string)
 	for i := 0; i < 2; i++ {
 		rows, err := dbs[i].Query("select id, domain, is_top_domain, organization_id from domains_organizations")
 		fatalOnError(err)
 		var do domainOrg
 		domainMap[i] = make(map[int64]domainOrg)
+		domID2Str[i] = make(map[int64]string)
+		domStr2ID[i] = make(map[string]int64)
 		for rows.Next() {
 			fatalOnError(rows.Scan(&do.id, &do.domain, &do.isTopDomain, &do.orgID))
 			// Map into merged organization_id - must succeed
@@ -184,17 +188,63 @@ func mergeDatabases(dbs []*sql.DB) error {
 				fatalf("cannot map organization ID %d from #%d input database", do.orgID, i+1)
 			}
 			do.orgName = orgName
-			orgIDMerged, ok := orgStr2ID[i][strings.ToLower(do.orgName)]
+			orgIDMerged, ok := orgStr2ID[2][strings.ToLower(do.orgName)]
 			if !ok {
 				fatalf("cannot map organization ID %d -> Name %s from #%d input database", do.orgID, do.orgName, i+1)
 			}
 			do.orgIDMerged = orgIDMerged
 			domainMap[i][do.id] = do
+			domID2Str[i][do.id] = do.domain
+			domStr2ID[i][strings.ToLower(do.domain)] = do.id
+			domStr[strings.ToLower(do.domain)] = do.domain
 		}
 		fatalOnError(rows.Err())
 		fatalOnError(rows.Close())
 	}
-	// domainMap[2] = make(map[int64]domainOrg)
+	domainMap[2] = make(map[int64]domainOrg)
+	domID2Str[2] = make(map[int64]string)
+	domStr2ID[2] = make(map[string]int64)
+	domAry := []domainOrg{}
+	for domain, id := range domStr2ID[0] {
+		_, ok := domStr2ID[1][domain]
+		if dbg && !ok {
+			fmt.Printf("Domain-Organization from 1st (id=%d, domain=%s, %+v) missing in 2nd, adding\n", id, domain, domainMap[0][id])
+		}
+		do, ok := domainMap[0][id]
+		if !ok {
+			fatalf("cannot find domain-organization for id=%d in the first database", id)
+		}
+		domAry = append(domAry, do)
+	}
+	for domain, id := range domStr2ID[1] {
+		_, ok := orgStr2ID[0][domain]
+		if dbg && !ok {
+			fmt.Printf("Domain-Organization from 2nd (id=%d, domain=%s, %+v) missing in 1st, adding\n", id, domain, domainMap[1][id])
+			do, ok := domainMap[1][id]
+			if !ok {
+				fatalf("cannot find domain-organization for id=%d in the second database", id)
+			}
+			domAry = append(domAry, do)
+		}
+	}
+	for _, do := range domAry {
+		lDomain, ok := domStr[strings.ToLower(do.domain)]
+		if !ok {
+			fatalf("no mapping for domain %s", do.domain)
+		}
+		_, err := mdb.Exec("insert into domains_organizations(domain, is_top_domain, organization_id) values(?, ?, ?)", lDomain, do.isTopDomain, do.orgIDMerged)
+		fatalOnError(err)
+		rows, err := mdb.Query("select id from domains_organizations where domain = ?", lDomain)
+		fatalOnError(err)
+		var id int64
+		for rows.Next() {
+			fatalOnError(rows.Scan(&id))
+		}
+		fatalOnError(rows.Err())
+		fatalOnError(rows.Close())
+		domID2Str[2][id] = do.domain
+		domStr2ID[2][lDomain] = id
+	}
 	return nil
 }
 
