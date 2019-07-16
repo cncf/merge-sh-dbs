@@ -19,3 +19,13 @@ Staging environment:
 - Shell into MariaDB pod: `AWS_PROFILE=lfproduct-staging KUBECONFIG=/root/.kube/config_lf_stg kubectl run -it --rm --image=mariadb --restart=Never mariadb --env="SH_HOST=`cat ~/dev/go/src/github.com/cncf/json2hat-helm/json2hat-helm/secrets/SH_HOST.stg.secret`" --env="SH_USER=`cat ~/dev/go/src/github.com/cncf/json2hat-helm/json2hat-helm/secrets/SH_USER.secret`" --env="SH_PASS=`cat ~/dev/go/src/github.com/cncf/json2hat-helm/json2hat-helm/secrets/SH_PASS.secret`" --env="SH_DB=`cat ~/dev/go/src/github.com/cncf/json2hat-helm/json2hat-helm/secrets/SH_DB.secret`" -- /bin/bash`.
 - Dump database into file: `mysqldump --single-transaction -h$SH_HOST -u$SH_USER -p$SH_PASS $SH_DB > dump.sql`.
 - Using another terminal copy dump from the K8s pod: `AWS_PROFILE=lfproduct-staging KUBECONFIG=/root/.kube/config_lf_stg kubectl cp mariadb:dump.sql dump_staging.sql`.
+
+
+# Restore dumps
+
+Restore dev and staging dumps, for example locally:
+
+- `mysql`: `create database dev`, `create database staging`, `mysql dev < dump_dev.sql`, `mysql staging < dump_staging.sql`.
+
+
+# Merge databases
