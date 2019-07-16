@@ -18,3 +18,7 @@
 /merge-sh-dbs
 
 out
+
+
+# DB dumps
+dump_*.sql
