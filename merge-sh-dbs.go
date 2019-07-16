@@ -271,11 +271,60 @@ func mergeDatabases(dbs []*sql.DB) error {
 		_, err := mdb.Exec("insert into matching_blacklist(excluded) values(?)", lBl)
 		fatalOnError(err)
 	}
+	/* uidentities
+	+---------------+--------------+------+-----+---------+-------+
+	| Field         | Type         | Null | Key | Default | Extra |
+	+---------------+--------------+------+-----+---------+-------+
+	| uuid          | varchar(128) | NO   | PRI | NULL    |       |
+	| last_modified | datetime(6)  | YES  |     | NULL    |       |
+	+---------------+--------------+------+-----+---------+-------+
+	*/
+	fmt.Printf("uidentities...\n")
+	_, err = mdb.Exec("delete from uidentities")
+	fatalOnError(err)
+	var uidMap [3]map[string]time.Time
+	for i := 0; i < 2; i++ {
+		uidMap[i] = make(map[string]time.Time)
+		rows, err := dbs[i].Query("select uuid, last_modified from uidentities")
+		fatalOnError(err)
+		uuid := ""
+		var modified time.Time
+		for rows.Next() {
+			fatalOnError(rows.Scan(&uuid, &modified))
+			uidMap[i][uuid] = modified
+		}
+		fatalOnError(rows.Err())
+		fatalOnError(rows.Close())
+	}
+	uidMap[2] = make(map[string]time.Time)
+	for i := 0; i < 2; i++ {
+		for uuid := range uidMap[i] {
+			mod1, ok1 := uidMap[0][uuid]
+			mod2, ok2 := uidMap[1][uuid]
+			if ok1 && !ok2 {
+				uidMap[2][uuid] = mod1
+			} else if !ok1 && ok2 {
+				uidMap[2][uuid] = mod2
+			} else if ok1 && ok2 {
+				if mod1.After(mod2) {
+					uidMap[2][uuid] = mod1
+				} else {
+					uidMap[2][uuid] = mod2
+				}
+			} else {
+				fatalf("wrong uidentities key %s", uuid)
+			}
+		}
+	}
+	for uuid, modified := range uidMap[2] {
+		_, err := mdb.Exec("insert into uidentities(uuid, last_modified) values(?, ?)", uuid, modified)
+		fatalOnError(err)
+	}
 	return nil
 }
 
 // getConnectString - get MariaDB SH (Sorting Hat) database DSN
-// Either provide full DSN via SH_DSN='shuser:shpassword@tcp(shhost:shport)/shdb?charset=utf8'
+// Either provide full DSN via SH_DSN='shuser:shpassword@tcp(shhost:shport)/shdb?charset=utf8&parseTime=true'
 // Or use some SH_ variables, only SH_PASS is required
 // Defaults are: "shuser:required_pwd@tcp(localhost:3306)/shdb?charset=utf8
 // SH_DSN has higher priority; if set no SH_ varaibles are used
@@ -306,7 +355,7 @@ func getConnectString(prefix string) string {
 		}
 		params := os.Getenv(prefix + "PARAMS")
 		if params == "" {
-			params = "?charset=utf8"
+			params = "?charset=utf8&parseTime=true"
 		}
 		if params == "-" {
 			params = ""
