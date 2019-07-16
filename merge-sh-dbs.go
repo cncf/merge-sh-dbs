@@ -245,13 +245,32 @@ func mergeDatabases(dbs []*sql.DB) error {
 		domID2Str[2][id] = do.domain
 		domStr2ID[2][lDomain] = id
 	}
-  /* matching_blacklist
-  +----------+--------------+------+-----+---------+-------+
-  | Field    | Type         | Null | Key | Default | Extra |
-  +----------+--------------+------+-----+---------+-------+
-  | excluded | varchar(128) | NO   | PRI | NULL    |       |
-  +----------+--------------+------+-----+---------+-------+
-  */
+	/* matching_blacklist
+	+----------+--------------+------+-----+---------+-------+
+	| Field    | Type         | Null | Key | Default | Extra |
+	+----------+--------------+------+-----+---------+-------+
+	| excluded | varchar(128) | NO   | PRI | NULL    |       |
+	+----------+--------------+------+-----+---------+-------+
+	*/
+	fmt.Printf("matching_blacklist...\n")
+	_, err = mdb.Exec("delete from matching_blacklist")
+	fatalOnError(err)
+	blMap := make(map[string]string)
+	for i := 0; i < 2; i++ {
+		rows, err := dbs[i].Query("select excluded from matching_blacklist")
+		fatalOnError(err)
+		bl := ""
+		for rows.Next() {
+			fatalOnError(rows.Scan(&bl))
+			blMap[strings.ToLower(bl)] = bl
+		}
+		fatalOnError(rows.Err())
+		fatalOnError(rows.Close())
+	}
+	for lBl := range blMap {
+		_, err := mdb.Exec("insert into matching_blacklist(excluded) values(?)", lBl)
+		fatalOnError(err)
+	}
 	return nil
 }
 
