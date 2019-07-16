@@ -10,3 +10,11 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+# VIM swap files
+*.swp
+
+# Go binaries
+/merge-sh-dbs
+
+out
