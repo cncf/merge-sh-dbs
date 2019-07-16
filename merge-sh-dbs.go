@@ -334,9 +334,6 @@ func getConnectString(prefix string) string {
 	if dsn == "" {
 		pass := os.Getenv(prefix + "PASS")
 		user := os.Getenv(prefix + "USER")
-		if user == "" {
-			user = "shuser"
-		}
 		proto := os.Getenv(prefix + "PROTO")
 		if proto == "" {
 			proto = "tcp"
