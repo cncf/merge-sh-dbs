@@ -41,6 +41,17 @@ type domainOrg struct {
 	orgIDMerged int64  // computed
 }
 
+// profile holds data for profiles table
+type profile struct {
+	uuid        string
+	name        *string
+	email       *string
+	gender      *string
+	genderAcc   *int64
+	isBot       *int
+	countryCode *string
+}
+
 // mergeDatabases merged dbs[0] and dbs[1] into dbs[2]
 func mergeDatabases(dbs []*sql.DB) error {
 	dbg := os.Getenv("DEBUG") != ""
@@ -318,6 +329,62 @@ func mergeDatabases(dbs []*sql.DB) error {
 	}
 	for uuid, modified := range uidMap[2] {
 		_, err := mdb.Exec("insert into uidentities(uuid, last_modified) values(?, ?)", uuid, modified)
+		fatalOnError(err)
+	}
+	/* profiles
+	+--------------+--------------+------+-----+---------+-------+
+	| Field        | Type         | Null | Key | Default | Extra |
+	+--------------+--------------+------+-----+---------+-------+
+	| uuid         | varchar(128) | NO   | PRI | NULL    |       |
+	| name         | varchar(128) | YES  |     | NULL    |       |
+	| email        | varchar(128) | YES  |     | NULL    |       |
+	| gender       | varchar(32)  | YES  |     | NULL    |       |
+	| gender_acc   | int(11)      | YES  |     | NULL    |       |
+	| is_bot       | tinyint(1)   | YES  |     | NULL    |       |
+	| country_code | varchar(2)   | YES  | MUL | NULL    |       |
+	+--------------+--------------+------+-----+---------+-------+
+	*/
+	fmt.Printf("profiles...\n")
+	_, err = mdb.Exec("delete from profiles")
+	fatalOnError(err)
+	var profileMap [3]map[string]profile
+	for i := 0; i < 2; i++ {
+		rows, err := dbs[i].Query("select uuid, name, email, gender, gender_acc, is_bot, country_code from profiles")
+		fatalOnError(err)
+		var p profile
+		profileMap[i] = make(map[string]profile)
+		for rows.Next() {
+			fatalOnError(rows.Scan(&p.uuid, &p.name, &p.email, &p.gender, &p.genderAcc, &p.isBot, &p.countryCode))
+			profileMap[i][p.uuid] = p
+		}
+		fatalOnError(rows.Err())
+		fatalOnError(rows.Close())
+	}
+	profileMap[2] = make(map[string]profile)
+	for uuid, p := range profileMap[0] {
+		p2, ok := profileMap[1][uuid]
+		profileMap[2][uuid] = p
+		if dbg && !ok {
+			fmt.Printf("Profile from 1st (%+v) missing in 2nd, adding\n", p)
+			continue
+		}
+		if p.name != p2.name || p.email != p2.email || p.gender != p2.gender || p.genderAcc != p2.genderAcc || p.isBot != p2.isBot || p.countryCode != p2.countryCode {
+			fmt.Printf("Profile from 1st (%+v) different in 2nd, using first\n", p)
+		}
+	}
+	for uuid, p := range profileMap[1] {
+		p1, ok := profileMap[0][uuid]
+		if dbg && !ok {
+			fmt.Printf("Profile from 2nd (%+v) missing in 1st, adding\n", p)
+			profileMap[2][uuid] = p
+			continue
+		}
+		if p.name != p1.name || p.email != p1.email || p.gender != p1.gender || p.genderAcc != p1.genderAcc || p.isBot != p1.isBot || p.countryCode != p1.countryCode {
+			fmt.Printf("Profile from 2nd (%+v) different in 1st, using first\n", p)
+		}
+	}
+	for _, p := range profileMap[2] {
+		_, err := mdb.Exec("insert into profiles(uuid, name, email, gender, gender_acc, is_bot, country_code) values(?, ?, ?, ?, ?, ?, ?)", p.uuid, p.name, p.email, p.gender, p.genderAcc, p.isBot, p.countryCode)
 		fatalOnError(err)
 	}
 	return nil
