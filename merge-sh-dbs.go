@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"os"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
+
+const nilStr string = "<nil>"
 
 func fatalOnError(err error) {
 	if err != nil {
@@ -50,6 +53,47 @@ type profile struct {
 	genderAcc   *int64
 	isBot       *int
 	countryCode *string
+}
+
+func (p profile) String() string {
+	s := "{uuid:" + p.uuid + ", name:"
+	if p.name != nil {
+		s += *p.name
+	} else {
+		s += nilStr
+	}
+	s += ", email:"
+	if p.email != nil {
+		s += *p.email
+	} else {
+		s += nilStr
+	}
+	s += ", gender:"
+	if p.gender != nil {
+		s += *p.gender
+	} else {
+		s += nilStr
+	}
+	s += ", genderAcc:"
+	if p.genderAcc != nil {
+		s += strconv.Itoa(int(*p.genderAcc))
+	} else {
+		s += nilStr
+	}
+	s += ", isBot:"
+	if p.isBot != nil {
+		s += strconv.Itoa(*p.isBot)
+	} else {
+		s += nilStr
+	}
+	s += ", countryCode:"
+	if p.countryCode != nil {
+		s += *p.countryCode
+	} else {
+		s += nilStr
+	}
+	s += "}"
+	return s
 }
 
 // identity holds data for indentities table
@@ -101,7 +145,7 @@ func mergeDatabases(dbs []*sql.DB) error {
 			continue
 		}
 		if c.name != c2.name || c.alpha3 != c2.alpha3 {
-			fmt.Printf("Country from 1st (%+v) different in 2nd, using first\n", c)
+			fmt.Printf("Country from 1st (%+v) different in 2nd (%+v), using first\n", c, c2)
 		}
 	}
 	for code, c := range countryMap[1] {
@@ -112,7 +156,7 @@ func mergeDatabases(dbs []*sql.DB) error {
 			continue
 		}
 		if c.name != c1.name || c.alpha3 != c1.alpha3 {
-			fmt.Printf("Country from 2nd (%+v) different in 1st, using first\n", c)
+			fmt.Printf("Country from 2nd (%+v) different in 1st (%+v), using first\n", c, c1)
 		}
 	}
 	for _, c := range countryMap[2] {
@@ -380,7 +424,7 @@ func mergeDatabases(dbs []*sql.DB) error {
 			continue
 		}
 		if p.name != p2.name || p.email != p2.email || p.gender != p2.gender || p.genderAcc != p2.genderAcc || p.isBot != p2.isBot || p.countryCode != p2.countryCode {
-			fmt.Printf("Profile from 1st (%+v) different in 2nd, using first\n", p)
+			fmt.Printf("Profile from 1st (%+v) different in 2nd (%+v), using first\n", p, p2)
 		}
 	}
 	for uuid, p := range profileMap[1] {
@@ -391,7 +435,7 @@ func mergeDatabases(dbs []*sql.DB) error {
 			continue
 		}
 		if p.name != p1.name || p.email != p1.email || p.gender != p1.gender || p.genderAcc != p1.genderAcc || p.isBot != p1.isBot || p.countryCode != p1.countryCode {
-			fmt.Printf("Profile from 2nd (%+v) different in 1st, using first\n", p)
+			fmt.Printf("Profile from 2nd (%+v) different in 1st (%+v), using first\n", p, p1)
 		}
 	}
 	for _, p := range profileMap[2] {
@@ -436,7 +480,7 @@ func mergeDatabases(dbs []*sql.DB) error {
 			continue
 		}
 		if i.name != i2.name || i.email != i2.email || i.username != i2.username || i.source != i2.source || i.uuid != i2.uuid {
-			fmt.Printf("Profile from 1st (%+v) different in 2nd, using first\n", i)
+			fmt.Printf("Identity from 1st (%+v) different in 2nd (%+v), using first\n", i, i2)
 		}
 	}
 	for id, i := range identityMap[1] {
@@ -447,7 +491,7 @@ func mergeDatabases(dbs []*sql.DB) error {
 			continue
 		}
 		if i.name != i1.name || i.email != i1.email || i.username != i1.username || i.source != i1.source || i.uuid != i1.uuid {
-			fmt.Printf("Identity from 2nd (%+v) different in 1st, using first\n", i)
+			fmt.Printf("Identity from 2nd (%+v) different in 1st (%+v), using first\n", i, i1)
 		}
 		if i.lastModified != nil && i1.lastModified != nil && (*i1.lastModified).After(*i.lastModified) {
 			fmt.Printf("identity from 2nd (%+v) newer than in 1st, using second\n", i1)
