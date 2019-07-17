@@ -174,10 +174,6 @@ func (i identity) String() string {
 }
 
 func identitiesDiffer(i1, i2 *identity) bool {
-	// email        *string
-	// username     *string
-	// uuid         *string
-	// lastModified *time.Time
 	if i1.source != i2.source {
 		return true
 	}
@@ -185,6 +181,18 @@ func identitiesDiffer(i1, i2 *identity) bool {
 		return true
 	}
 	if i1.name != nil && i2.name != nil && *i1.name != *i2.name {
+		return true
+	}
+	if i1.email == nil && i2.email != nil || i1.email != nil && i2.email == nil {
+		return true
+	}
+	if i1.email != nil && i2.email != nil && *i1.email != *i2.email {
+		return true
+	}
+	if i1.uuid == nil && i2.uuid != nil || i1.uuid != nil && i2.uuid == nil {
+		return true
+	}
+	if i1.uuid != nil && i2.uuid != nil && *i1.uuid != *i2.uuid {
 		return true
 	}
 	return false
