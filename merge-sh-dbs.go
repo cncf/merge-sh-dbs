@@ -52,6 +52,17 @@ type profile struct {
 	countryCode *string
 }
 
+// identity holds data for indentities table
+type identity struct {
+	id           string
+	name         *string
+	email        *string
+	username     *string
+	source       string
+	uuid         *string
+	lastModified *time.Time
+}
+
 // mergeDatabases merged dbs[0] and dbs[1] into dbs[2]
 func mergeDatabases(dbs []*sql.DB) error {
 	dbg := os.Getenv("DEBUG") != ""
@@ -385,6 +396,66 @@ func mergeDatabases(dbs []*sql.DB) error {
 	}
 	for _, p := range profileMap[2] {
 		_, err := mdb.Exec("insert into profiles(uuid, name, email, gender, gender_acc, is_bot, country_code) values(?, ?, ?, ?, ?, ?, ?)", p.uuid, p.name, p.email, p.gender, p.genderAcc, p.isBot, p.countryCode)
+		fatalOnError(err)
+	}
+	/* identities
+	+---------------+--------------+------+-----+---------+-------+
+	| Field         | Type         | Null | Key | Default | Extra |
+	+---------------+--------------+------+-----+---------+-------+
+	| id            | varchar(128) | NO   | PRI | NULL    |       |
+	| name          | varchar(128) | YES  | MUL | NULL    |       |
+	| email         | varchar(128) | YES  |     | NULL    |       |
+	| username      | varchar(128) | YES  |     | NULL    |       |
+	| source        | varchar(32)  | NO   |     | NULL    |       |
+	| uuid          | varchar(128) | YES  | MUL | NULL    |       |
+	| last_modified | datetime(6)  | YES  |     | NULL    |       |
+	+---------------+--------------+------+-----+---------+-------+
+	*/
+	fmt.Printf("identities...\n")
+	_, err = mdb.Exec("delete from identities")
+	fatalOnError(err)
+	var identityMap [3]map[string]identity
+	for i := 0; i < 2; i++ {
+		rows, err := dbs[i].Query("select id, name, email, username, source, uuid, last_modified from identities")
+		fatalOnError(err)
+		var iy identity
+		identityMap[i] = make(map[string]identity)
+		for rows.Next() {
+			fatalOnError(rows.Scan(&iy.id, &iy.name, &iy.email, &iy.username, &iy.source, &iy.uuid, &iy.lastModified))
+			identityMap[i][iy.id] = iy
+		}
+		fatalOnError(rows.Err())
+		fatalOnError(rows.Close())
+	}
+	identityMap[2] = make(map[string]identity)
+	for id, i := range identityMap[0] {
+		i2, ok := identityMap[1][id]
+		identityMap[2][id] = i
+		if dbg && !ok {
+			fmt.Printf("Identity from 1st (%+v) missing in 2nd, adding\n", i)
+			continue
+		}
+		if i.name != i2.name || i.email != i2.email || i.username != i2.username || i.source != i2.source || i.uuid != i2.uuid {
+			fmt.Printf("Profile from 1st (%+v) different in 2nd, using first\n", i)
+		}
+	}
+	for id, i := range identityMap[1] {
+		i1, ok := identityMap[0][id]
+		if dbg && !ok {
+			fmt.Printf("identity from 2nd (%+v) missing in 1st, adding\n", i)
+			identityMap[2][id] = i
+			continue
+		}
+		if i.name != i1.name || i.email != i1.email || i.username != i1.username || i.source != i1.source || i.uuid != i1.uuid {
+			fmt.Printf("Identity from 2nd (%+v) different in 1st, using first\n", i)
+		}
+		if i.lastModified != nil && i1.lastModified != nil && (*i1.lastModified).After(*i.lastModified) {
+			fmt.Printf("identity from 2nd (%+v) newer than in 1st, using second\n", i1)
+			identityMap[2][id] = i1
+		}
+	}
+	for _, i := range identityMap[2] {
+		_, err := mdb.Exec("insert into identities(id, name, email, username, source, uuid, last_modified) values(?, ?, ?, ?, ?, ?, ?)", i.id, i.name, i.email, i.username, i.source, i.uuid, i.lastModified)
 		fatalOnError(err)
 	}
 	return nil
