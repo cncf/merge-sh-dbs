@@ -13,6 +13,7 @@ import (
 )
 
 const nilStr string = "<nil>"
+const emailStr string = ", email:"
 
 func fatalOnError(err error) {
 	if err != nil {
@@ -62,7 +63,7 @@ func (p profile) String() string {
 	} else {
 		s += nilStr
 	}
-	s += ", email:"
+	s += emailStr
 	if p.email != nil {
 		s += *p.email
 	} else {
@@ -105,6 +106,36 @@ type identity struct {
 	source       string
 	uuid         *string
 	lastModified *time.Time
+}
+
+func (i identity) String() string {
+	s := "{id:" + i.id + ", name:"
+	if i.name != nil {
+		s += *i.name
+	} else {
+		s += nilStr
+	}
+	s += emailStr
+	if i.email != nil {
+		s += *i.email
+	} else {
+		s += nilStr
+	}
+	s += ", username:"
+	if i.username != nil {
+		s += *i.username
+	} else {
+		s += nilStr
+	}
+	s += ", source:" + i.source
+	s += ", uuid:"
+	if i.uuid != nil {
+		s += *i.uuid
+	} else {
+		s += nilStr
+	}
+	s += fmt.Sprintf(", lastModified:%+v}", i.lastModified)
+	return s
 }
 
 // mergeDatabases merged dbs[0] and dbs[1] into dbs[2]
