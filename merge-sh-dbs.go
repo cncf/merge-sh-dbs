@@ -607,6 +607,17 @@ func mergeDatabases(dbs []*sql.DB) error {
 		_, err := mdb.Exec("insert into identities(id, name, email, username, source, uuid, last_modified) values(?, ?, ?, ?, ?, ?, ?)", i.id, i.name, i.email, i.username, i.source, i.uuid, i.lastModified)
 		fatalOnError(err)
 	}
+	/* enrollmants
+	+-----------------+--------------+------+-----+---------+----------------+
+	| Field           | Type         | Null | Key | Default | Extra          |
+	+-----------------+--------------+------+-----+---------+----------------+
+	| id              | int(11)      | NO   | PRI | NULL    | auto_increment |
+	| start           | datetime     | NO   |     | NULL    |                |
+	| end             | datetime     | NO   |     | NULL    |                |
+	| uuid            | varchar(128) | NO   | MUL | NULL    |                |
+	| organization_id | int(11)      | NO   | MUL | NULL    |                |
+	+-----------------+--------------+------+-----+---------+----------------+
+	*/
 	return nil
 }
 
