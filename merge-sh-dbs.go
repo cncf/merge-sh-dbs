@@ -171,8 +171,10 @@ func mergeDatabases(dbs []*sql.DB) error {
 	for code, c := range countryMap[0] {
 		c2, ok := countryMap[1][code]
 		countryMap[2][code] = c
-		if dbg && !ok {
-			fmt.Printf("Country from 1st (%+v) missing in 2nd, adding\n", c)
+		if !ok {
+			if dbg {
+				fmt.Printf("Country from 1st (%+v) missing in 2nd, adding\n", c)
+			}
 			continue
 		}
 		if c.name != c2.name || c.alpha3 != c2.alpha3 {
@@ -181,8 +183,10 @@ func mergeDatabases(dbs []*sql.DB) error {
 	}
 	for code, c := range countryMap[1] {
 		c1, ok := countryMap[0][code]
-		if dbg && !ok {
-			fmt.Printf("Country from 2nd (%+v) missing in 1st, adding\n", c)
+		if !ok {
+			if dbg {
+				fmt.Printf("Country from 2nd (%+v) missing in 1st, adding\n", c)
+			}
 			countryMap[2][code] = c
 			continue
 		}
@@ -315,8 +319,10 @@ func mergeDatabases(dbs []*sql.DB) error {
 	}
 	for domain, id := range domStr2ID[1] {
 		_, ok := orgStr2ID[0][domain]
-		if dbg && !ok {
-			fmt.Printf("Domain-Organization from 2nd (id=%d, domain=%s, %+v) missing in 1st, adding\n", id, domain, domainMap[1][id])
+		if !ok {
+			if dbg {
+				fmt.Printf("Domain-Organization from 2nd (id=%d, domain=%s, %+v) missing in 1st, adding\n", id, domain, domainMap[1][id])
+			}
 			do, ok := domainMap[1][id]
 			if !ok {
 				fatalf("cannot find domain-organization for id=%d in the second database", id)
@@ -450,8 +456,10 @@ func mergeDatabases(dbs []*sql.DB) error {
 	for uuid, p := range profileMap[0] {
 		p2, ok := profileMap[1][uuid]
 		profileMap[2][uuid] = p
-		if dbg && !ok {
-			fmt.Printf("Profile from 1st (%+v) missing in 2nd, adding\n", p)
+		if !ok {
+			if dbg {
+				fmt.Printf("Profile from 1st (%+v) missing in 2nd, adding\n", p)
+			}
 			continue
 		}
 		if p.name != p2.name || p.email != p2.email || p.gender != p2.gender || p.genderAcc != p2.genderAcc || p.isBot != p2.isBot || p.countryCode != p2.countryCode {
@@ -460,8 +468,10 @@ func mergeDatabases(dbs []*sql.DB) error {
 	}
 	for uuid, p := range profileMap[1] {
 		p1, ok := profileMap[0][uuid]
-		if dbg && !ok {
-			fmt.Printf("Profile from 2nd (%+v) missing in 1st, adding\n", p)
+		if !ok {
+			if dbg {
+				fmt.Printf("Profile from 2nd (%+v) missing in 1st, adding\n", p)
+			}
 			profileMap[2][uuid] = p
 			continue
 		}
@@ -506,8 +516,10 @@ func mergeDatabases(dbs []*sql.DB) error {
 	for id, i := range identityMap[0] {
 		i2, ok := identityMap[1][id]
 		identityMap[2][id] = i
-		if dbg && !ok {
-			fmt.Printf("Identity from 1st (%+v) missing in 2nd, adding\n", i)
+		if !ok {
+			if dbg {
+				fmt.Printf("Identity from 1st (%+v) missing in 2nd, adding\n", i)
+			}
 			continue
 		}
 		if i.name != i2.name || i.email != i2.email || i.username != i2.username || i.source != i2.source || i.uuid != i2.uuid {
@@ -516,8 +528,10 @@ func mergeDatabases(dbs []*sql.DB) error {
 	}
 	for id, i := range identityMap[1] {
 		i1, ok := identityMap[0][id]
-		if dbg && !ok {
-			fmt.Printf("identity from 2nd (%+v) missing in 1st, adding\n", i)
+		if !ok {
+			if dbg {
+				fmt.Printf("Identity from 2nd (%+v) missing in 1st, adding\n", i)
+			}
 			identityMap[2][id] = i
 			continue
 		}
