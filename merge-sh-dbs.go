@@ -97,6 +97,41 @@ func (p profile) String() string {
 	return s
 }
 
+// profilesDiffer: cmpare two profile with the same uuid
+func profilesDiffer(p1, p2 *profile) bool {
+	if p1.name == nil && p2.name != nil || p1.name != nil && p2.name == nil {
+		return true
+	}
+	if p1.name != nil && p2.name != nil && *p1.name != *p2.name {
+		return true
+	}
+	if p1.email == nil && p2.email != nil || p1.email != nil && p2.email == nil {
+		return true
+	}
+	if p1.email != nil && p2.email != nil && *p1.email != *p2.email {
+		return true
+	}
+	if p1.genderAcc == nil && p2.genderAcc != nil || p1.genderAcc != nil && p2.genderAcc == nil {
+		return true
+	}
+	if p1.genderAcc != nil && p2.genderAcc != nil && *p1.genderAcc != *p2.genderAcc {
+		return true
+	}
+	if p1.isBot == nil && p2.isBot != nil || p1.isBot != nil && p2.isBot == nil {
+		return true
+	}
+	if p1.isBot != nil && p2.isBot != nil && *p1.isBot != *p2.isBot {
+		return true
+	}
+	if p1.countryCode == nil && p2.countryCode != nil || p1.countryCode != nil && p2.countryCode == nil {
+		return true
+	}
+	if p1.countryCode != nil && p2.countryCode != nil && *p1.countryCode != *p2.countryCode {
+		return true
+	}
+	return false
+}
+
 // identity holds data for indentities table
 type identity struct {
 	id           string
@@ -136,6 +171,23 @@ func (i identity) String() string {
 	}
 	s += fmt.Sprintf(", lastModified:%+v}", i.lastModified)
 	return s
+}
+
+func identitiesDiffer(i1, i2 *identity) bool {
+	// email        *string
+	// username     *string
+	// uuid         *string
+	// lastModified *time.Time
+	if i1.source != i2.source {
+		return true
+	}
+	if i1.name == nil && i2.name != nil || i1.name != nil && i2.name == nil {
+		return true
+	}
+	if i1.name != nil && i2.name != nil && *i1.name != *i2.name {
+		return true
+	}
+	return false
 }
 
 // mergeDatabases merged dbs[0] and dbs[1] into dbs[2]
@@ -462,7 +514,7 @@ func mergeDatabases(dbs []*sql.DB) error {
 			}
 			continue
 		}
-		if p.name != p2.name || p.email != p2.email || p.gender != p2.gender || p.genderAcc != p2.genderAcc || p.isBot != p2.isBot || p.countryCode != p2.countryCode {
+		if profilesDiffer(&p, &p2) {
 			fmt.Printf("Profile from 1st (%+v) different in 2nd (%+v), using first\n", p, p2)
 		}
 	}
@@ -475,7 +527,7 @@ func mergeDatabases(dbs []*sql.DB) error {
 			profileMap[2][uuid] = p
 			continue
 		}
-		if p.name != p1.name || p.email != p1.email || p.gender != p1.gender || p.genderAcc != p1.genderAcc || p.isBot != p1.isBot || p.countryCode != p1.countryCode {
+		if profilesDiffer(&p, &p1) {
 			fmt.Printf("Profile from 2nd (%+v) different in 1st (%+v), using first\n", p, p1)
 		}
 	}
@@ -522,7 +574,7 @@ func mergeDatabases(dbs []*sql.DB) error {
 			}
 			continue
 		}
-		if i.name != i2.name || i.email != i2.email || i.username != i2.username || i.source != i2.source || i.uuid != i2.uuid {
+		if identitiesDiffer(&i, &i2) {
 			fmt.Printf("Identity from 1st (%+v) different in 2nd (%+v), using first\n", i, i2)
 		}
 	}
@@ -535,7 +587,7 @@ func mergeDatabases(dbs []*sql.DB) error {
 			identityMap[2][id] = i
 			continue
 		}
-		if i.name != i1.name || i.email != i1.email || i.username != i1.username || i.source != i1.source || i.uuid != i1.uuid {
+		if identitiesDiffer(&i, &i1) {
 			fmt.Printf("Identity from 2nd (%+v) different in 1st (%+v), using first\n", i, i1)
 		}
 		if i.lastModified != nil && i1.lastModified != nil && (*i1.lastModified).After(*i.lastModified) {
