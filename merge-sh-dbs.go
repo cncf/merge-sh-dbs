@@ -318,7 +318,7 @@ func mergeDatabases(dbs []*sql.DB) error {
 		domAry = append(domAry, do)
 	}
 	for domain, id := range domStr2ID[1] {
-		_, ok := orgStr2ID[0][domain]
+		_, ok := domStr2ID[0][domain]
 		if !ok {
 			if dbg {
 				fmt.Printf("Domain-Organization from 2nd (id=%d, domain=%s, %+v) missing in 1st, adding\n", id, domain, domainMap[1][id])
