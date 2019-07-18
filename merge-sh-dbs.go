@@ -720,7 +720,7 @@ func mergeDatabases(dbs []*sql.DB) error {
 	+-----------------+--------------+------+-----+---------+----------------+
 	*/
 	fmt.Printf("enrollmants...\n")
-	_, err = mdb.Exec("delete from ienrollmants")
+	_, err = mdb.Exec("delete from enrollmants")
 	fatalOnError(err)
 	var enrollMap [3]map[enrollmentKey]enrollment
 	for i := 0; i < 2; i++ {
