@@ -132,6 +132,46 @@ func profilesDiffer(p1, p2 *profile) bool {
 	return false
 }
 
+func mergeProfiles(p1, p2 *profile) profile {
+	var p profile
+	p.uuid = p1.uuid
+	p.name = p1.name
+	if p1.name == nil && p2.name != nil {
+		p.name = p2.name
+	}
+	p.email = p1.email
+	if p1.email == nil && p2.email != nil {
+		p.email = p2.email
+	}
+	p.gender = p1.gender
+	if p1.gender == nil && p2.gender != nil {
+		p.gender = p2.gender
+	}
+	p.genderAcc = p1.genderAcc
+	if p1.genderAcc == nil && p2.genderAcc != nil {
+		p.genderAcc = p2.genderAcc
+	}
+	if p1.genderAcc != nil && p2.genderAcc != nil {
+		if *p1.genderAcc > *p2.genderAcc && p1.gender != nil {
+			p.genderAcc = p1.genderAcc
+			p.gender = p1.gender
+		}
+		if *p2.genderAcc > *p1.genderAcc && p2.gender != nil {
+			p.genderAcc = p2.genderAcc
+			p.gender = p2.gender
+		}
+	}
+	p.isBot = p1.isBot
+	if p1.isBot == nil && p2.isBot != nil {
+		p.isBot = p2.isBot
+	}
+	p.countryCode = p1.countryCode
+	if p1.countryCode == nil && p2.countryCode != nil {
+		p.countryCode = p2.countryCode
+	}
+	return p
+}
+
 // identity holds data for indentities table
 type identity struct {
 	id           string
@@ -196,6 +236,41 @@ func identitiesDiffer(i1, i2 *identity) bool {
 		return true
 	}
 	return false
+}
+
+func mergeIdentities(i1, i2 *identity) identity {
+	var i identity
+	i.id = i1.id
+	i.name = i1.name
+	if i1.name == nil && i2.name != nil {
+		i.name = i2.name
+	}
+	i.email = i1.email
+	if i1.email == nil && i2.email != nil {
+		i.email = i2.email
+	}
+	i.username = i1.username
+	if i1.username == nil && i2.username != nil {
+		i.username = i2.username
+	}
+	i.uuid = i1.uuid
+	if i1.uuid == nil && i2.uuid != nil {
+		i.uuid = i2.uuid
+	}
+	i.lastModified = i1.lastModified
+	if i1.lastModified == nil && i2.lastModified != nil {
+		i.lastModified = i2.lastModified
+	}
+	i.source = i1.source
+	if i1.lastModified != nil && i2.lastModified != nil {
+		if (*i1.lastModified).After(*i.lastModified) {
+			i.source = i1.source
+		} else {
+			i.lastModified = i2.lastModified
+			i.source = i2.source
+		}
+	}
+	return i
 }
 
 // mergeDatabases merged dbs[0] and dbs[1] into dbs[2]
@@ -523,7 +598,8 @@ func mergeDatabases(dbs []*sql.DB) error {
 			continue
 		}
 		if profilesDiffer(&p, &p2) {
-			fmt.Printf("Profile from 1st (%+v) different in 2nd (%+v), using first\n", p, p2)
+			fmt.Printf("Profile from 1st (%+v) different in 2nd (%+v), merging\n", p, p2)
+			profileMap[2][uuid] = mergeProfiles(&p, &p2)
 		}
 	}
 	for uuid, p := range profileMap[1] {
@@ -536,7 +612,8 @@ func mergeDatabases(dbs []*sql.DB) error {
 			continue
 		}
 		if profilesDiffer(&p, &p1) {
-			fmt.Printf("Profile from 2nd (%+v) different in 1st (%+v), using first\n", p, p1)
+			fmt.Printf("Profile from 2nd (%+v) different in 1st (%+v), merging\n", p, p1)
+			profileMap[2][uuid] = mergeProfiles(&p, &p1)
 		}
 	}
 	for _, p := range profileMap[2] {
@@ -583,7 +660,8 @@ func mergeDatabases(dbs []*sql.DB) error {
 			continue
 		}
 		if identitiesDiffer(&i, &i2) {
-			fmt.Printf("Identity from 1st (%+v) different in 2nd (%+v), using first\n", i, i2)
+			fmt.Printf("Identity from 1st (%+v) different in 2nd (%+v), merging\n", i, i2)
+			identityMap[2][id] = mergeIdentities(&i, &i2)
 		}
 	}
 	for id, i := range identityMap[1] {
@@ -596,11 +674,8 @@ func mergeDatabases(dbs []*sql.DB) error {
 			continue
 		}
 		if identitiesDiffer(&i, &i1) {
-			fmt.Printf("Identity from 2nd (%+v) different in 1st (%+v), using first\n", i, i1)
-		}
-		if i.lastModified != nil && i1.lastModified != nil && (*i1.lastModified).After(*i.lastModified) {
-			fmt.Printf("identity from 2nd (%+v) newer than in 1st, using second\n", i1)
-			identityMap[2][id] = i1
+			fmt.Printf("Identity from 2nd (%+v) different in 1st (%+v), merging\n", i, i1)
+			identityMap[2][id] = mergeIdentities(&i, &i1)
 		}
 	}
 	for _, i := range identityMap[2] {
