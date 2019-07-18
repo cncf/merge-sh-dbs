@@ -292,6 +292,11 @@ func enrollmentsDiffer(e1, e2 *enrollment) bool {
 	return e1.orgName != e2.orgName
 }
 
+func (e enrollment) String() string {
+	s := fmt.Sprintf("{id:%d, start:%+v, end: %+v, uuid:%s, orgID:%d, orgName:%s, orgIDMerged:%d}", e.id, e.start, e.end, e.uuid, e.orgID, e.orgName, e.orgIDMerged)
+	return s
+}
+
 // enrollmentKey holds key data for the enrollment
 type enrollmentKey struct {
 	start time.Time
