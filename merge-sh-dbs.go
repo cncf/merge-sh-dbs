@@ -708,7 +708,7 @@ func mergeDatabases(dbs []*sql.DB) error {
 		_, err := mdb.Exec("insert into identities(id, name, email, username, source, uuid, last_modified) values(?, ?, ?, ?, ?, ?, ?)", i.id, i.name, i.email, i.username, i.source, i.uuid, i.lastModified)
 		fatalOnError(err)
 	}
-	/* enrollmants
+	/* enrollments
 	+-----------------+--------------+------+-----+---------+----------------+
 	| Field           | Type         | Null | Key | Default | Extra          |
 	+-----------------+--------------+------+-----+---------+----------------+
@@ -719,12 +719,12 @@ func mergeDatabases(dbs []*sql.DB) error {
 	| organization_id | int(11)      | NO   | MUL | NULL    |                |
 	+-----------------+--------------+------+-----+---------+----------------+
 	*/
-	fmt.Printf("enrollmants...\n")
-	_, err = mdb.Exec("delete from enrollmants")
+	fmt.Printf("enrollments...\n")
+	_, err = mdb.Exec("delete from enrollments")
 	fatalOnError(err)
 	var enrollMap [3]map[enrollmentKey]enrollment
 	for i := 0; i < 2; i++ {
-		rows, err := dbs[i].Query("select id, start, end, uuid, organization_id from enrollmants")
+		rows, err := dbs[i].Query("select id, start, end, uuid, organization_id from enrollments")
 		fatalOnError(err)
 		var (
 			e    enrollment
