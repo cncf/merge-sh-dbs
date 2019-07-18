@@ -273,7 +273,7 @@ func mergeIdentities(i1, i2 *identity) identity {
 	return i
 }
 
-//  enrollment holds data for enrollments table
+// enrollment holds data for enrollments table
 type enrollment struct {
 	id          int64
 	start       time.Time
@@ -282,6 +282,21 @@ type enrollment struct {
 	orgID       int64
 	orgName     string
 	orgIDMerged int64
+}
+
+// We are comparing enrollments using 'enrollmentkey' which already contains uuid, start, to
+// we are skipiing id filed because it is an auto incrementing PK, so we only have to compare
+// organization, we're not comparing its ID because it can be different on different databases (auto incrementing key)
+// So basically we only need to compare orgNames
+func enrollmentsDiffer(e1, e2 *enrollment) bool {
+	return e1.orgName != e2.orgName
+}
+
+// enrollmentKey holds key data for the enrollment
+type enrollmentKey struct {
+	start time.Time
+	end   time.Time
+	uuid  string
 }
 
 // mergeDatabases merged dbs[0] and dbs[1] into dbs[2]
@@ -707,12 +722,15 @@ func mergeDatabases(dbs []*sql.DB) error {
 	fmt.Printf("enrollmants...\n")
 	_, err = mdb.Exec("delete from ienrollmants")
 	fatalOnError(err)
-	var enrollMap [3]map[int64]enrollment
+	var enrollMap [3]map[enrollmentKey]enrollment
 	for i := 0; i < 2; i++ {
 		rows, err := dbs[i].Query("select id, start, end, uuid, organization_id from enrollmants")
 		fatalOnError(err)
-		var e enrollment
-		enrollMap[i] = make(map[int64]enrollment)
+		var (
+			e    enrollment
+			eKey enrollmentKey
+		)
+		enrollMap[i] = make(map[enrollmentKey]enrollment)
 		for rows.Next() {
 			fatalOnError(rows.Scan(&e.id, &e.start, &e.end, &e.uuid, &e.orgID))
 			// Map into merged organization_id - must succeed
@@ -726,10 +744,44 @@ func mergeDatabases(dbs []*sql.DB) error {
 				fatalf("cannot map organization ID %d -> Name %s from #%d input database", e.orgID, e.orgName, i+1)
 			}
 			e.orgIDMerged = orgIDMerged
-			enrollMap[i][e.id] = e
+			eKey.uuid = e.uuid
+			eKey.start = e.start
+			eKey.end = e.end
+			enrollMap[i][eKey] = e
 		}
 		fatalOnError(rows.Err())
 		fatalOnError(rows.Close())
+	}
+	enrollMap[2] = make(map[enrollmentKey]enrollment)
+	for k, e := range enrollMap[0] {
+		e2, ok := enrollMap[1][k]
+		enrollMap[2][k] = e
+		if !ok {
+			if dbg {
+				fmt.Printf("Enrollment from 1st (%+v) missing in 2nd, adding\n", e)
+			}
+			continue
+		}
+		if enrollmentsDiffer(&e, &e2) {
+			fmt.Printf("Enrollment from 1st (%+v) different in 2nd (%+v), used first\n", e, e2)
+		}
+	}
+	for k, e := range enrollMap[1] {
+		e1, ok := enrollMap[0][k]
+		if !ok {
+			if dbg {
+				fmt.Printf("Enrollment from 2nd (%+v) missing in 1st, adding\n", e)
+			}
+			enrollMap[2][k] = e
+			continue
+		}
+		if enrollmentsDiffer(&e, &e1) {
+			fmt.Printf("Enrollment from 2nd (%+v) different in 1st (%+v), used first\n", e, e1)
+		}
+	}
+	for _, e := range enrollMap[2] {
+		_, err := mdb.Exec("insert into enrollments(id, start, end, uuid, organization_id) values(?, ?, ?, ?, ?)", e.id, e.start, e.end, e.uuid, e.orgIDMerged)
+		fatalOnError(err)
 	}
 	return nil
 }
