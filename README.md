@@ -57,3 +57,8 @@ Many possible connect strings:
 - You can prepend with `DEBUG=1` to have more verbose output.
 - Using TCP: `SH1_USER=root SH2_USER=root SH_USER=root SH1_PASS=... SH2_PASS=... SH_PASS=... SH1_DB=dev SH2_DB=staging SH_DB=merged ./merge-sh-dbs`.
 - Using unix sockets without passwords (fastest local option): `SH1_DSN='root@unix(/var/run/mysqld/mysqld.sock)/dev?charset=utf8&parseTime=true' SH2_DSN='root@unix(/var/run/mysqld/mysqld.sock)/staging?charset=utf8&parseTime=true' SH_DSN='root@unix(/var/run/mysqld/mysqld.sock)/merged?charset=utf8&parseTime=true' ./merge-sh-dbs`.
+
+# Dump merged database
+
+Dump merged database into a SQL file: `mysqldump --single-transaction merged > merged.sql`.
+
