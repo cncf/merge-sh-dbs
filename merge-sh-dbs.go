@@ -780,7 +780,7 @@ func mergeDatabases(dbs []*sql.DB) error {
 		}
 	}
 	for _, e := range enrollMap[2] {
-		_, err := mdb.Exec("insert into enrollments(id, start, end, uuid, organization_id) values(?, ?, ?, ?, ?)", e.id, e.start, e.end, e.uuid, e.orgIDMerged)
+		_, err := mdb.Exec("insert into enrollments(start, end, uuid, organization_id) values(?, ?, ?, ?)", e.start, e.end, e.uuid, e.orgIDMerged)
 		fatalOnError(err)
 	}
 	return nil
