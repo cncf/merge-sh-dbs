@@ -273,6 +273,17 @@ func mergeIdentities(i1, i2 *identity) identity {
 	return i
 }
 
+//  enrollment holds data for enrollments table
+type enrollment struct {
+	id          int64
+	start       time.Time
+	end         time.Time
+	uuid        string
+	orgID       int64
+	orgName     string
+	orgIDMerged int64
+}
+
 // mergeDatabases merged dbs[0] and dbs[1] into dbs[2]
 func mergeDatabases(dbs []*sql.DB) error {
 	dbg := os.Getenv("DEBUG") != ""
@@ -693,6 +704,33 @@ func mergeDatabases(dbs []*sql.DB) error {
 	| organization_id | int(11)      | NO   | MUL | NULL    |                |
 	+-----------------+--------------+------+-----+---------+----------------+
 	*/
+	fmt.Printf("enrollmants...\n")
+	_, err = mdb.Exec("delete from ienrollmants")
+	fatalOnError(err)
+	var enrollMap [3]map[int64]enrollment
+	for i := 0; i < 2; i++ {
+		rows, err := dbs[i].Query("select id, start, end, uuid, organization_id from enrollmants")
+		fatalOnError(err)
+		var e enrollment
+		enrollMap[i] = make(map[int64]enrollment)
+		for rows.Next() {
+			fatalOnError(rows.Scan(&e.id, &e.start, &e.end, &e.uuid, &e.orgID))
+			// Map into merged organization_id - must succeed
+			orgName, ok := orgID2Str[i][e.orgID]
+			if !ok {
+				fatalf("cannot map organization ID %d from #%d input database", e.orgID, i+1)
+			}
+			e.orgName = orgName
+			orgIDMerged, ok := orgStr2ID[2][strings.ToLower(e.orgName)]
+			if !ok {
+				fatalf("cannot map organization ID %d -> Name %s from #%d input database", e.orgID, e.orgName, i+1)
+			}
+			e.orgIDMerged = orgIDMerged
+			enrollMap[i][e.id] = e
+		}
+		fatalOnError(rows.Err())
+		fatalOnError(rows.Close())
+	}
 	return nil
 }
 
