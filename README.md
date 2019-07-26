@@ -7,13 +7,16 @@ Tool to merge Sorting Hat databases
 
 You need to have `cncf/json2hat-helm` cloned and its access secrets configured. You can find database details for both `development` and `staging` environments in AWS console.
 
+Copy secretes from `json2hat-helm` to `secrets` directory, example (depending on `json2hat-helm` path): `cp ../json2hat-helm/json2hat-helm/secrets/*.secret secrets/`.
+
 Development environment:
 
-- Shell into MariaDB pod: `AWS_PROFILE=lfproduct-dev KUBECONFIG=/root/.kube/config_lf kubectl run -it --rm --image=mariadb --restart=Never mariadb --env="SH_HOST=`cat ~/dev/go/src/github.com/cncf/json2hat-helm/json2hat-helm/secrets/SH_HOST.secret`" --env="SH_USER=`cat ~/dev/go/src/github.com/cncf/json2hat-helm/json2hat-helm/secrets/SH_USER.secret`" --env="SH_PASS=`cat ~/dev/go/src/github.com/cncf/json2hat-helm/json2hat-helm/secrets/SH_PASS.secret`" --env="SH_DB=`cat ~/dev/go/src/github.com/cncf/json2hat-helm/json2hat-helm/secrets/SH_DB.secret`" -- /bin/bash`.
+- Shell into MariaDB pod: `` devk.sh run -it --rm --image=mariadb --restart=Never mariadb --env="SH_HOST=`cat secrets/SH_HOST.secret`" --env="SH_USER=`cat secrets/SH_USER.secret`" --env="SH_PASS=`cat secrets/SH_PASS.secret`" --env="SH_DB=`cat secrets/SH_DB.secret`" -- /bin/bash ``.
 - Dump database into file: `mysqldump --single-transaction -h$SH_HOST -u$SH_USER -p$SH_PASS $SH_DB > dump.sql`.
 - Dump database structure into file: `mysqldump --single-transaction -d -h$SH_HOST -u$SH_USER -p$SH_PASS $SH_DB > struct.sql`.
-- Using another terminal copy dump from the K8s pod: `AWS_PROFILE=lfproduct-dev KUBECONFIG=/root/.kube/config_lf kubectl cp mariadb:dump.sql dump_dev.sql`.
-- Using another terminal copy structure dump from the K8s pod: `AWS_PROFILE=lfproduct-dev KUBECONFIG=/root/.kube/config_lf kubectl cp mariadb:struct.sql dump_struct.sql`.
+- Using another terminal copy dump from the K8s pod: `devk.sh cp mariadb:dump.sql dump_dev.sql`.
+- Using another terminal copy structure dump from the K8s pod: `devk.sh cp mariadb:struct.sql dump_struct.sql`.
+- Logout from the mariadb pod shell.
 
 
 Staging environment:
