@@ -11,7 +11,7 @@ Copy secretes from `json2hat-helm` to `secrets` directory, example (depending on
 
 Development environment:
 
-- Shell into MariaDB pod: `` devk.sh run -it --rm --image=mariadb --restart=Never mariadb --env="SH_HOST=`cat secrets/SH_HOST.secret`" --env="SH_USER=`cat secrets/SH_USER.secret`" --env="SH_PASS=`cat secrets/SH_PASS.secret`" --env="SH_DB=`cat secrets/SH_DB.secret`" -- /bin/bash ``.
+- Shell into MariaDB pod: `` devk.sh run -it --rm --image=mariadb --restart=Never mariadb --env="SH_HOST=`cat secrets/SH_HOST.dev.secret`" --env="SH_USER=`cat secrets/SH_USER.secret`" --env="SH_PASS=`cat secrets/SH_PASS.dev.secret`" --env="SH_DB=`cat secrets/SH_DB.secret`" -- /bin/bash ``.
 - Dump database into file: `mysqldump --single-transaction -h$SH_HOST -u$SH_USER -p$SH_PASS $SH_DB > dump.sql`.
 - Dump database structure into file: `mysqldump --single-transaction -d -h$SH_HOST -u$SH_USER -p$SH_PASS $SH_DB > struct.sql`.
 - Using another terminal copy dump from the K8s pod: `devk.sh cp mariadb:dump.sql dump_dev.sql`.
@@ -21,7 +21,7 @@ Development environment:
 
 Staging environment:
 
-- Shell into MariaDB pod: `` stgk.sh run -it --rm --image=mariadb --restart=Never mariadb --env="SH_HOST=`cat secrets/SH_HOST.stg.secret`" --env="SH_USER=`cat secrets/SH_USER.secret`" --env="SH_PASS=`cat secrets/SH_PASS.secret`" --env="SH_DB=`cat secrets/SH_DB.secret`" -- /bin/bash ``.
+- Shell into MariaDB pod: `` stgk.sh run -it --rm --image=mariadb --restart=Never mariadb --env="SH_HOST=`cat secrets/SH_HOST.stg.secret`" --env="SH_USER=`cat secrets/SH_USER.secret`" --env="SH_PASS=`cat secrets/SH_PASS.stg.secret`" --env="SH_DB=`cat secrets/SH_DB.secret`" -- /bin/bash ``.
 - Dump database into file: `mysqldump --single-transaction -h$SH_HOST -u$SH_USER -p$SH_PASS $SH_DB > dump.sql`.
 - Using another terminal copy dump from the K8s pod: `stgk.sh cp mariadb:dump.sql dump_staging.sql`.
 - Logout from the mariadb pod shell.
